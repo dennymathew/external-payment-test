@@ -55,7 +55,6 @@ struct ExternalPurchaseLifecycleFeatureTests {
             isolateSharedStorage(&$0)
             $0.date = .constant(fixedDate)
             $0.externalPurchaseClient.token = { _ in nil }
-            $0.bffClient.reportTokens = { _, _, _, _ in }
             $0.bffClient.verifySession = { _ in VerifyResult(status: .pending, verifiedAt: nil) }
         }
         store.state.$pendingSessions.withLock { $0 = [pending] }
@@ -80,13 +79,12 @@ struct ExternalPurchaseLifecycleFeatureTests {
             isolateSharedStorage(&$0)
             $0.date = .constant(fixedDate)
             $0.externalPurchaseClient.token = { _ in nil }
-            $0.bffClient.reportTokens = { _, _, _, _ in }
         }
         store.exhaustivity = .off(showSkippedAssertions: false)
 
         await store.send(.launch)
-        await store.receive(\.acquisitionTokenResponse) {
-            $0.$tokenState.withLock { $0 = .unavailable(reason: .expectedForReturningCustomer) }
+        await store.receive(\.acquisitionTokenHealth) {
+            $0.$acquisitionHealth.withLock { $0 = .unavailable(reason: .expectedForReturningCustomer) }
         }
         await store.finish()
     }

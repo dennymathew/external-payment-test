@@ -156,7 +156,10 @@ struct ExternalPurchaseTokenTests {
         // previously-serialized decoded shape, so an added field can't
         // break it.
         let value = encode(payload: validPayload())
-        let fixture = Data("{\"value\":\"\(value)\"}".utf8)
+        // `ExternalPurchaseToken`'s `Codable` conformance uses a single-value
+        // container (just the raw string), not a keyed `{"value": ...}`
+        // object — this fixture mirrors exactly what's actually on disk.
+        let fixture = Data("\"\(value)\"".utf8)
         let token = try JSONDecoder().decode(ExternalPurchaseToken.self, from: fixture)
         #expect(token.value == value)
         #expect(token.payload.bundleId == bundleId)

@@ -81,7 +81,7 @@ struct CheckoutFeatureTests {
             $0.phase = .presentingNotice
         }
         #expect(store.state.tokenSnapshot.services != nil)
-        #expect(store.state.tokenSnapshot.acquisition == nil) // returning-customer default
+        #expect(store.state.tokenSnapshot.acquisition != nil)
         await store.receive(.noticeResponse(.success(.continue))) {
             $0.phase = .creatingSession
         }
