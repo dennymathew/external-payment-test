@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>en</string>
+	<key>CFBundleExecutable</key>
+	<string>$(EXECUTABLE_NAME)</string>
+	<key>CFBundleIdentifier</key>
+	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleName</key>
+	<string>$(PRODUCT_NAME)</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>$(MARKETING_VERSION)</string>
+	<key>CFBundleVersion</key>
+	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<key>LSRequiresIPhoneOS</key>
+	<true/>
+
+	<!-- Registered only so the scheme resolves for completeness / for a
+	     device's system-level EPL hand-off later — the mock flow itself
+	     never actually leaves the app via this scheme. WKWebView's
+	     navigation delegate intercepts immowelt://payment-complete inside
+	     CheckoutWebView before it ever reaches iOS's URL routing; this
+	     entry exists as a fallback / for parity with the real flow, where
+	     the redirect really would arrive via .onOpenURL. Must match
+	     ExternalPurchaseKitConfig.returnURLScheme (set in AppConfig) and
+	     the mock server's APP_URL_SCHEME. -->
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLName</key>
+			<string>com.example.externalpurchasepoc</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>immowelt</string>
+			</array>
+		</dict>
+	</array>
+
+	<!-- Scoped to local network / loopback only — NOT a blanket NSAllowsArbitraryLoads.
+	     Needed because the mock backend is plain HTTP on localhost or a LAN IP. -->
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
+	</dict>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>This app connects to a local development server on your Mac to test the mock checkout flow.</string>
+
+	<key>UIApplicationSceneManifest</key>
+	<dict>
+		<key>UIApplicationSupportsMultipleScenes</key>
+		<false/>
+	</dict>
+	<key>UILaunchScreen</key>
+	<dict/>
+	<key>UISupportedInterfaceOrientations</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+	</array>
+</dict>
+</plist>
