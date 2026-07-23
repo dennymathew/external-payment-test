@@ -544,6 +544,22 @@ PAGE_SHELL = """<!doctype html>
   .btn-ghost {{ background: #fff; color: #666; border: 1px solid #ddd; font-size: 13px; padding: 10px; }}
   .note {{ font-size: 12px; color: #888; margin-top: 20px; line-height: 1.5; }}
   form {{ margin: 0; }}
+  .processing {{ text-align: center; padding: 24px 0; }}
+  .processing p {{ margin: 20px 0 0; color: #555; font-size: 15px; }}
+  .spinner {{
+    width: 40px; height: 40px; margin: 0 auto;
+    border: 3px solid #e0e4ec; border-top-color: #12336b;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }}
+  @keyframes spin {{ to {{ transform: rotate(360deg); }} }}
+  .success {{ text-align: center; padding: 12px 0; }}
+  .success-icon {{
+    width: 56px; height: 56px; line-height: 56px; margin: 0 auto 16px;
+    background: #1e8e3e; color: #fff; border-radius: 50%;
+    font-size: 26px; font-weight: 700;
+  }}
+  .success p {{ font-size: 17px; font-weight: 600; margin: 0; }}
 </style>
 </head>
 <body>
@@ -672,6 +688,47 @@ async def checkout_step3(session_id: str, request: Request):
     return HTMLResponse(render_page("Confirm payment", "Review &amp; confirm", body))
 
 
+def render_processing_page(session_id: str) -> str:
+    # Rendered synchronously in response to the "Complete Purchase" POST, so
+    # the user always sees a realistic in-progress state instead of the page
+    # going blank while the browser resolves the next hop. The redirect to
+    # the success page happens client-side, after a beat, purely for pacing.
+    body = f"""
+      <div class="processing">
+        <div class="spinner"></div>
+        <p>Processing your payment&hellip;</p>
+      </div>
+      <script>
+        setTimeout(function() {{
+          window.location.replace("/checkout/{session_id}/success");
+        }}, 1400);
+      </script>
+    """
+    return render_page("Checkout", "Almost done", body)
+
+
+def render_success_page(session_id: str) -> str:
+    # This is the URL the iOS app's WKWebView watches for to know the
+    # purchase finished — see CheckoutNavigationPolicy. The custom-scheme
+    # hop below still happens (unchanged) so the app dismisses exactly as
+    # before; a plain browser without that scheme registered just stays put
+    # on this success page instead of going blank.
+    app_return_url = f"{APP_URL_SCHEME}://payment-complete?session_id={session_id}&status=paid"
+    body = f"""
+      <div class="success">
+        <div class="success-icon">&#10003;</div>
+        <p>Payment complete</p>
+        <div class="note">You can return to the app now.</div>
+      </div>
+      <script>
+        setTimeout(function() {{
+          window.location.href = "{app_return_url}";
+        }}, 600);
+      </script>
+    """
+    return render_page("Checkout", "Payment successful", body)
+
+
 def render_status_page(session_id: str, status: str) -> str:
     body = f"""
       <p>This checkout session is <strong>{status}</strong> and can no longer be acted on.</p>
@@ -693,6 +750,19 @@ async def _mark_paid_after_delay(session_id: str, delay_seconds: float):
         session["verified_at"] = now_utc()
 
 
+@app.get("/checkout/{session_id}/success", response_class=HTMLResponse)
+async def checkout_success(session_id: str, request: Request):
+    auth_error = require_web_session(session_id, request)
+    if auth_error is not None:
+        return auth_error
+
+    session = get_session_or_404(session_id)
+    status = effective_status(session)
+    if status != "paid":
+        return HTMLResponse(render_status_page(session_id, status))
+    return HTMLResponse(render_success_page(session_id))
+
+
 @app.post("/checkout/{session_id}/action/{action}")
 async def checkout_action(session_id: str, action: str, request: Request, background_tasks: BackgroundTasks):
     auth_error = require_web_session(session_id, request)
@@ -704,7 +774,7 @@ async def checkout_action(session_id: str, action: str, request: Request, backgr
     if action == "complete":
         session["status"] = "paid"
         session["verified_at"] = now_utc()
-        return redirect_to_app(session_id, "paid")
+        return HTMLResponse(render_processing_page(session_id))
 
     if action == "cancel":
         session["status"] = "cancelled"
