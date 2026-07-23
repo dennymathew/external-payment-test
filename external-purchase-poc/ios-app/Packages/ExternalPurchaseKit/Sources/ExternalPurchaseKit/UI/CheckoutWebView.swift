@@ -52,24 +52,17 @@ struct CheckoutWebView: UIViewRepresentable {
                 return
             }
             // Never trust anything about *what* this URL claims (its query
-            // string) — only that it's our app's return URL. The scheme
-            // match alone is the signal to stop navigating and let
-            // `CheckoutFeature` ask the BFF what actually happened.
-            if url.scheme == ExternalPurchaseKitConfig.returnURLScheme,
-               url.host == ExternalPurchaseKitConfig.returnURLHost {
+            // string) — only which host/scheme it's on.
+            switch CheckoutNavigationPolicy.decision(for: url, allowedHosts: parent.allowedHosts) {
+            case .cancelForRedirect:
                 decisionHandler(.cancel)
                 parent.onRedirectIntercepted()
-                return
-            }
-            // Anything not on the checkout host or an approved PSP host
-            // leaves the sheet entirely rather than navigating inside it —
-            // e.g. the mock checkout's "Open partner site" link.
-            if let host = url.host, parent.allowedHosts.contains(host) {
+            case .allow:
                 decisionHandler(.allow)
-                return
+            case .cancelAndOpenExternally:
+                decisionHandler(.cancel)
+                UIApplication.shared.open(url)
             }
-            decisionHandler(.cancel)
-            UIApplication.shared.open(url)
         }
 
         func webView(

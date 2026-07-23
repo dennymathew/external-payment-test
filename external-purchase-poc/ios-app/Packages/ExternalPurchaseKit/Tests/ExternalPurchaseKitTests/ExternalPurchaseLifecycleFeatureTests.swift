@@ -29,7 +29,6 @@ struct ExternalPurchaseLifecycleFeatureTests {
             isolateSharedStorage(&$0)
             $0.date = .constant(fixedDate)
             $0.externalPurchaseClient.token = { _ in nil }
-            $0.bffClient.reportTokens = { _, _, _, _ in }
             $0.bffClient.verifySession = { _ in VerifyResult(status: .paid, verifiedAt: verifiedAt) }
         }
         // Simulate the app having force-quit mid-checkout on a previous run:
